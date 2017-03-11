@@ -106,7 +106,6 @@ class SMAPI(object):
         params.update({'AuthUserName': self.username, 'AuthPassword': self.password})
 
         try:
-            import pdb ; pdb.set_trace()
             with closing(requests.request(http_method, srv_url, params=params)) as req:
                 bs = bs4.BeautifulSoup(req.content)
                 return bs
