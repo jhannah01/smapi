@@ -3,6 +3,9 @@
 *.py[co]
 *.log
 .local/
+.ipy_sqdb.sqlite
+*.csv
+*.txt
 
 # Distribution / packaging
 .Python

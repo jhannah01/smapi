@@ -40,7 +40,8 @@ setup(
     packages=find_packages(exclude=['contrib', 'docs', 'tests']),
     install_requires=[
         'requests',
-        'beautifulsoup4'
+        'beautifulsoup4',
+        'simplejson'
     ],
     entry_points={
         'console_scripts': ['smapi=smapi.cli:run_clitool']
