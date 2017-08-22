@@ -2,6 +2,7 @@
 
 import requests
 import bs4
+import types
 from contextlib import closing
 
 from smapi.exc import SMAPIError
@@ -97,19 +98,84 @@ class SMAPI(object):
 
         return '%s/Services/svc%s.asmx/%s' % (res, srv_name, method)
 
-    def call(self, srv_name, method, params={}, response_handler=None, use_post=True):
-        http_method = 'POST'
+    def call(self, srv_name, method, params={}, response_handler=None, use_post=False):
+        http_method = 'GET'
         if use_post:
-            http_method = 'GET'
+            http_method = 'POST'
 
         srv_url = self._get_service_url(srv_name, method)
         params.update({'AuthUserName': self.username, 'AuthPassword': self.password})
 
         try:
             with closing(requests.request(http_method, srv_url, params=params)) as req:
-                bs = bs4.BeautifulSoup(req.content)
+                bs = bs4.BeautifulSoup(req.content, 'lxml')
                 return bs
         except requests.HTTPError,ex:
             raise SMAPIError('Error calling service: "%s"' % str(ex), base_ex=ex)
+
+    def get_requested_user_settings(self, email_address, requested_settings=['password']):
+        if isinstance(requested_settings, types.StringTypes):
+            requested_settings = [requested_settings]
+        req_params = {'EmailAddress': email_address, 'requestedSettings': requested_settings}
+        results = {}
+
+        res = self.call('UserAdmin', 'GetRequestedUserSettings', params=req_params)
+        if not res:
+            return None
+
+        res_holder = res.find('settingvalues')
+        if not res_holder:
+            raise SMAPIError('Could not find "settingvalues" in response', dump_objs={'result': res})
+
+        values = res_holder.find_all('string')
+        if not values:
+            raise SMAPIError('Cannot find any values in the "settingvalues" returned: %s' % res_holder.prettify(),
+                             dump_objs={'result': res, 'settingvalues': res_holder})
+
+        for k,v in [ent.text.split('=') for ent in values]:
+            results[str(k)] = str(v)
+
+        return results
+
+    def get_all_domains(self):
+        domains = []
+
+        res = self.call('DomainAdmin', 'GetAllDomains')
+        if not res:
+            return None
+
+        domain_list = res.find('domainnames')
+        if not domain_list:
+            raise SMAPIError('Cannot find any domains. Returned: %s' % res.prettify(), dump_objs={'result':res })
+
+        domain_entries = domain_list.find_all('string')
+        for dom in domain_entries:
+            if not dom or not dom.text:
+                continue
+            dom = str(dom.text).lower()
+            domains.append(dom)
+
+        return domains
+
+    def get_domain_users(self, domain):
+        users = []
+
+        res = self.call('DomainAdmin', 'GetDomainUsers', params={'DomainName': domain})
+        if not res:
+            return None
+
+        user_list = res.find('users')
+        if not user_list:
+            raise SMAPIError('Cannot find any users for domain "%s". Returned: %s' % (domain, res.prettify()),
+                             dump_objs={'result': res})
+
+        usern_entries = user_list.find_all('user')
+        for usr in user_list:
+            if not usr or (usr == u'\n') or not usr.text:
+                continue
+            usr = str(usr.text).lower()
+            users.append(usr)
+
+        return users
 
 __all__ = ['SMAPI']

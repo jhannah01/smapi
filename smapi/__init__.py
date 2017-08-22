@@ -2,8 +2,11 @@
 
 '''
 
-from smapi.exc import SMAPIError
-from smapi.base import SMAPI
-from smapi.cli import CLITool, CLIError, run_clitool
+__do_debug__ = True
+__version__ = '0.1.1'
 
-__version__ = '0.1.0'
+from smapi.exc import *
+from smapi.zoho import *
+from smapi.base import *
+from smapi.cli import *
+from smapi.helpers import *
